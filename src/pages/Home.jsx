@@ -1,12 +1,18 @@
-import React from 'react';
-import Banner from '../components/Banner';
-import Packages from '../components/Packages';
+import Banner from "../components/Banner";
+import About from "../components/About";
+import Packages from "../components/Packages";
+import HowItWorks from "../components/HowItWorks";
 
 const Home = () => {
-    return (
-       <Banner></Banner>,
-       <Packages></Packages>
-    );
+  return (
+    <main>
+      <Banner />
+      <Packages />
+      <About />
+      <HowItWorks />
+      
+    </main>
+  );
 };
 
 export default Home;

@@ -1,17 +1,46 @@
 import { createBrowserRouter } from "react-router-dom";
 import Home from "../pages/Home"; // Home page ta niche banacchi
 import MainLayout from "../layouts/MainLaout";
+import JoinEmployee from "../pages/JoinEmployee";
+import DashboardHome from "../pages/DashboardHome"
+import JoinHR from "../pages/JoinHR";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
+import PrivateRoute from "./PrivateRoute";
 
 export const router = createBrowserRouter([
-    {
+  {
+    path: "/",
+    element: <MainLayout></MainLayout>,
+    children: [
+      {
         path: "/",
-        element: <MainLayout></MainLayout>,
-        children: [
-            {
-                path: "/",
-                element: <Home />,
-            },
-            // Bakigula (login, register) amra pore ek ek kore add korbo
-        ],
-    },
+        element: <Home />,
+      },
+      {
+        path: "join-employee",
+        element: <JoinEmployee />,
+      },
+      {
+        path: "join-hr",
+        element: <JoinHR />,
+      },
+      {
+        path: "login",
+        element: <Login />,
+      },
+      {
+        path: "register",
+        element: <Register />,
+      },
+      {
+        path: "dashboard",
+        element: (
+          <PrivateRoute>
+            <DashboardHome/>
+          </PrivateRoute>
+        ),
+      },
+    ],
+  },
 ]);
