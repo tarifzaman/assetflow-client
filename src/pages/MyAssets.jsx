@@ -1,73 +1,54 @@
-import React, { useEffect, useState } from "react";
-import useAxiosPublic from "../hooks/useAxiosPublic";
-import useAuth from "../hooks/useAuth";
-import Swal from "sweetalert2";
+import React, { useEffect, useState } from 'react';
+import useAuth from '../hooks/useAuth';
+import useAxiosPublic from '../hooks/useAxiosPublic';
+import Swal from 'sweetalert2';
 
 const MyAssets = () => {
     const { user } = useAuth();
     const axiosPublic = useAxiosPublic();
     const [requests, setRequests] = useState([]);
 
-    useEffect(() => {
-        if (user?.email) {
-            axiosPublic.get(`/my-requests/${user.email}`)
-                .then(res => setRequests(res.data));
-        }
-    }, [user, axiosPublic]);
+    const loadData = () => axiosPublic.get(`/my-requests/${user?.email}`).then(res => setRequests(res.data));
+    useEffect(() => { loadData(); }, [user?.email]);
 
-    const handleCancel = (id) => {
-        Swal.fire({
-            title: "Cancel Request?",
-            text: "You can re-request later.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Yes, cancel!"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Backend-e delete request pathano
-                axiosPublic.delete(`/requests/${id}`).then(() => {
-                    setRequests(requests.filter(r => r._id !== id));
-                    Swal.fire("Cancelled", "Your request was removed.", "success");
-                });
+    const handleReturn = async (req) => {
+        // Instant UI reaction
+        setRequests(requests.map(r => r._id === req._id ? { ...r, status: 'returned' } : r));
+
+        try {
+            const res = await axiosPublic.patch(`/requests/return/${req._id}`, { assetId: req.assetId });
+            if (res.data.modifiedCount > 0) {
+                Swal.fire({ title: "Asset Returned", icon: "success", toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                loadData();
             }
-        });
+        } catch (err) { loadData(); }
     };
 
     return (
-        <div className="p-8">
-            <h2 className="text-2xl font-bold mb-6">My Assets & Requests</h2>
-            <div className="overflow-x-auto bg-white rounded-2xl shadow border">
+        <div className="p-10 bg-slate-50 min-h-screen">
+            <h2 className="text-2xl font-black mb-8">My Assets & Requests</h2>
+            <div className="overflow-hidden border border-slate-200 rounded-2xl shadow-lg bg-white">
                 <table className="table w-full">
-                    <thead>
-                        <tr className="bg-base-200">
-                            <th>Asset Name</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Request Date</th>
-                            <th>Action</th>
-                        </tr>
+                    <thead className="bg-[#5C42CF] text-white">
+                        <tr><th className="py-5 px-8">Asset</th><th>Type</th><th>Status</th><th>Request Date</th><th className="text-center">Action</th></tr>
                     </thead>
                     <tbody>
                         {requests.map(req => (
-                            <tr key={req._id}>
-                                <td className="font-bold">{req.productName}</td>
-                                <td>{req.productType}</td>
+                            <tr key={req._id} className="hover:bg-slate-50">
+                                <td className="py-5 px-8 font-bold">{req.productName}</td>
+                                <td className="text-indigo-600 font-bold">{req.productType}</td>
                                 <td>
-                                    <span className={`badge ${req.status === 'pending' ? 'badge-warning' : req.status === 'approved' ? 'badge-success' : 'badge-error'}`}>
+                                    <span className={`px-4 py-1 rounded-lg text-[10px] font-black uppercase ${req.status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
                                         {req.status}
                                     </span>
                                 </td>
                                 <td>{new Date(req.requestDate).toLocaleDateString()}</td>
-                                <td>
-                                    {req.status === 'pending' && (
-                                        <button onClick={() => handleCancel(req._id)} className="btn btn-xs btn-outline btn-error">Cancel</button>
-                                    )}
-                                    {req.status === 'approved' && req.productType === 'Returnable' && (
-                                        <button className="btn btn-xs btn-primary">Return</button>
-                                    )}
-                                    {req.status === 'approved' && req.productType === 'Non-returnable' && (
-                                        <span className="text-xs opacity-50">Permanent</span>
-                                    )}
+                                <td className="text-center">
+                                    {req.status === 'approved' ? (
+                                        <button onClick={() => handleReturn(req)} className="bg-[#5C42CF] text-white px-6 py-1.5 rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700">Return</button>
+                                    ) : req.status === 'returned' ? (
+                                        <span className="text-emerald-500 font-black text-xs bg-emerald-50 px-4 py-1.5 rounded-lg">Completed</span>
+                                    ) : <span className="text-slate-300">---</span>}
                                 </td>
                             </tr>
                         ))}
@@ -77,5 +58,4 @@ const MyAssets = () => {
         </div>
     );
 };
-
 export default MyAssets;

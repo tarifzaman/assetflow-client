@@ -1,84 +1,133 @@
-import React, { useEffect, useState } from 'react';
-import useAuth from '../hooks/useAuth';
-import useAxiosPublic from '../hooks/useAxiosPublic';
-import Swal from 'sweetalert2';
+import React, { useEffect, useState } from "react";
+import useAuth from "../hooks/useAuth";
+import useAxiosPublic from "../hooks/useAxiosPublic";
+import Swal from "sweetalert2";
 
 const AllRequests = () => {
-    const { user } = useAuth();
-    const axiosPublic = useAxiosPublic();
-    const [requests, setRequests] = useState([]);
+  const { user } = useAuth();
+  const axiosPublic = useAxiosPublic();
+  const [requests, setRequests] = useState([]);
 
-    const fetchRequests = async () => {
-        if (user?.email) {
-            const res = await axiosPublic.get(`/hr-requests/${user.email}`);
-            setRequests(res.data);
-        }
-    };
+  const loadData = () =>
+    axiosPublic
+      .get(`/hr-requests/${user?.email}`)
+      .then((res) => setRequests(res.data));
+  useEffect(() => {
+    loadData();
+  }, [user?.email]);
 
-    useEffect(() => {
-        fetchRequests();
-    }, [user?.email]);
-
-    const handleApprove = async (request) => {
-        try {
-            // ব্যাকএন্ডের ৫ নম্বর API (Approve) কল করা হচ্ছে
-            const res = await axiosPublic.patch(`/requests/approve/${request._id}`, {
-                assetId: request.assetId,
-                requesterEmail: request.requesterEmail, // এমপ্লয়ির ইমেইল
-                hrEmail: user?.email // আপনার (HR) ইমেইল
-            });
-
-            if (res.data.modifiedCount > 0) {
-                Swal.fire("Success", "Employee added to your team!", "success");
-                fetchRequests();
-            }
-        } catch (err) {
-            Swal.fire("Error", "Could not approve", "error");
-        }
-    };
-
-    const handleReject = async (id) => {
-        const res = await axiosPublic.patch(`/requests/reject/${id}`);
-        if (res.data.modifiedCount > 0) {
-            Swal.fire("Rejected", "Request has been declined", "info");
-            fetchRequests();
-        }
-    };
-
-    return (
-        <div className="p-10">
-            <h2 className="text-3xl font-bold mb-6">Pending Requests</h2>
-            <div className="overflow-x-auto bg-white rounded-xl shadow">
-                <table className="table w-full">
-                    <thead>
-                        <tr>
-                            <th>Asset Name</th>
-                            <th>Requester</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {requests.map(req => (
-                            <tr key={req._id}>
-                                <td>{req.productName}</td>
-                                <td>{req.requesterEmail}</td>
-                                <td><span className="badge badge-warning">{req.status}</span></td>
-                                <td>
-                                    {req.status === 'pending' && (
-                                        <div className="flex gap-2">
-                                            <button onClick={() => handleApprove(req)} className="btn btn-xs btn-success text-white">Approve</button>
-                                            <button onClick={() => handleReject(req._id)} className="btn btn-xs btn-error text-white">Reject</button>
-                                        </div>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  const handleApprove = async (req) => {
+    // Optimistic Update: সাথে সাথে UI চেঞ্জ হবে
+    setRequests(
+      requests.map((r) =>
+        r._id === req._id ? { ...r, status: "approved" } : r,
+      ),
     );
-};
 
+    try {
+      const res = await axiosPublic.patch(`/requests/approve/${req._id}`, {
+        assetId: req.assetId,
+        requesterEmail: req.requesterEmail,
+        hrEmail: user?.email,
+      });
+      if (res.data.modifiedCount > 0) {
+        Swal.fire({
+          title: "Approved!",
+          icon: "success",
+          toast: true,
+          position: "top-end",
+          showConfirmButton: false,
+          timer: 1000,
+        });
+        loadData();
+      }
+    } catch (err) {
+      loadData();
+    }
+  };
+
+  return (
+    <div className="p-10 bg-slate-50 min-h-screen">
+      <h2 className="text-3xl font-black mb-10 text-slate-800">
+        Pending Requests
+      </h2>
+      <div className="overflow-hidden rounded-[2rem] shadow-xl bg-white border border-slate-100">
+        <table className="table w-full">
+          <thead>
+            <tr className="bg-slate-900 text-white">
+              <th className="py-6 px-10 uppercase text-[10px]">Asset</th>
+              <th className="uppercase text-[10px]">Employee Email</th>
+              <th className="uppercase text-[10px]">Status</th>
+              <th className="text-center uppercase text-[10px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map((req) => (
+              <tr
+                key={req._id}
+                className="hover:bg-slate-50 transition-all border-b border-slate-50"
+              >
+                <td className="py-6 px-10 font-bold text-slate-700">
+                  {req.productName}
+                </td>
+                <td className="text-slate-500 font-bold">
+                  {req.requesterEmail}
+                </td>
+                <td>
+                  <span
+                    className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                      req.status === "approved"
+                        ? "bg-emerald-500 text-white"
+                        : req.status === "returned"
+                          ? "bg-blue-500 text-white"
+                          : req.status === "pending"
+                            ? "bg-orange-400 text-white"
+                            : "bg-rose-500 text-white"
+                    }`}
+                  >
+                    {req.status}
+                  </span>
+                </td>
+                <td className="text-center">
+                  {req.status === "pending" ? (
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => handleApprove(req)}
+                        className="btn btn-xs bg-emerald-500 border-none text-white px-4 hover:scale-110 transition-transform"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() =>
+                          axiosPublic
+                            .patch(`/requests/reject/${req._id}`)
+                            .then(() => loadData())
+                        }
+                        className="btn btn-xs bg-rose-500 border-none text-white px-4 hover:scale-110 transition-transform"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center items-center">
+                      {req.status === "returned" ? (
+                        <span className="text-blue-600 font-black text-[10px] bg-blue-50 px-4 py-2 rounded-xl border border-blue-200 uppercase">
+                          ✨ Returned Done
+                        </span>
+                      ) : (
+                        <span className="text-slate-300 font-bold italic text-[11px] uppercase">
+                          Processed
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 export default AllRequests;

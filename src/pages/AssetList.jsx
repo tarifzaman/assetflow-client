@@ -1,81 +1,74 @@
-import React, { useEffect, useState } from "react";
-import useAxiosPublic from "../hooks/useAxiosPublic";
-import useAuth from "../hooks/useAuth";
-import Swal from "sweetalert2";
+import React, { useEffect, useState } from 'react';
+import useAuth from '../hooks/useAuth';
+import useAxiosPublic from '../hooks/useAxiosPublic';
+import Swal from 'sweetalert2';
 
-const AssetList = () => {
-    const [assets, setAssets] = useState([]); // Dummy data-r bodole empty array
-    const axiosPublic = useAxiosPublic();
+const MyAssets = () => {
     const { user } = useAuth();
+    const axiosPublic = useAxiosPublic();
+    const [requests, setRequests] = useState([]);
 
-    // Database theke data ana
+    const loadData = () => {
+        axiosPublic.get(`/my-requests/${user?.email}`)
+            .then(res => setRequests(res.data));
+    };
+
     useEffect(() => {
-        if (user?.email) {
-            axiosPublic.get(`/assets?email=${user.email}`)
-                .then(res => {
-                    setAssets(res.data);
-                });
-        }
-    }, [user, axiosPublic]);
+        loadData();
+    }, [user?.email]);
 
-    // Delete korar logic (Database thekeo muche jabe)
-    const handleDelete = (id) => {
-        Swal.fire({
-            title: "Are you sure?",
-            text: "You won't be able to revert this!",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#d33",
-            confirmButtonText: "Yes, delete it!"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                axiosPublic.delete(`/assets/${id}`)
-                    .then(res => {
-                        if (res.data.deletedCount > 0) {
-                            // UI thekeo muche dewa
-                            const remaining = assets.filter(a => a._id !== id);
-                            setAssets(remaining);
-                            Swal.fire("Deleted!", "Asset has been removed.", "success");
-                        }
-                    });
-            }
-        });
+    const handleReturn = async (req) => {
+        const res = await axiosPublic.patch(`/requests/return/${req._id}`, { assetId: req.assetId });
+        if (res.data.modifiedCount > 0) {
+            Swal.fire("Returned!", "Asset returned successfully.", "success");
+            loadData();
+        }
     };
 
     return (
-        <div className="p-8">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800">My Assets ({assets.length})</h2>
-            <div className="overflow-x-auto bg-white rounded-xl shadow-md border border-gray-100">
-                <table className="table w-full">
-                    <thead className="bg-gray-50">
+        <div className="p-10 font-sans">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">My Assets & Requests</h2>
+            <div className="overflow-hidden border border-gray-300 rounded-2xl shadow-sm bg-white">
+                <table className="table w-full border-collapse">
+                    <thead className="bg-gray-50 text-gray-500 text-sm border-b">
                         <tr>
-                            <th>Product Name</th>
-                            <th>Type</th>
-                            <th>Quantity</th>
-                            <th>Date Added</th>
-                            <th>Action</th>
+                            <th className="py-4 px-6 text-left font-semibold uppercase tracking-wider">Asset Name</th>
+                            <th className="text-left font-semibold uppercase tracking-wider">Type</th>
+                            <th className="text-left font-semibold uppercase tracking-wider">Status</th>
+                            <th className="text-left font-semibold uppercase tracking-wider">Request Date</th>
+                            <th className="text-center font-semibold uppercase tracking-wider">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {assets.length === 0 ? (
-                            <tr><td colSpan="5" className="text-center py-10 opacity-50">No assets found in database.</td></tr>
-                        ) : (
-                            assets.map(asset => (
-                                <tr key={asset._id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="font-semibold">{asset.productName}</td>
-                                    <td>
-                                        <span className={`badge ${asset.productType === 'Returnable' ? 'badge-primary' : 'badge-ghost'}`}>
-                                            {asset.productType}
+                    <tbody className="divide-y divide-gray-200">
+                        {requests.map(req => (
+                            <tr key={req._id} className="hover:bg-gray-50">
+                                <td className="py-4 px-6 font-bold text-gray-800">{req.productName}</td>
+                                <td className="text-gray-600">{req.productType}</td>
+                                <td>
+                                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                                        req.status === 'approved' ? 'bg-emerald-500 text-white' : 
+                                        req.status === 'returned' ? 'bg-gray-100 text-gray-500' : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                        {req.status}
+                                    </span>
+                                </td>
+                                <td className="text-gray-500">{new Date(req.requestDate).toLocaleDateString()}</td>
+                                <td className="text-center">
+                                    {req.status === 'approved' ? (
+                                        <button 
+                                            onClick={() => handleReturn(req)}
+                                            className="bg-[#5C42CF] hover:bg-[#4a35a8] text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md"
+                                        >
+                                            Return
+                                        </button>
+                                    ) : (
+                                        <span className="text-gray-300 text-sm font-medium">
+                                            {req.status === 'returned' ? 'Completed' : '---'}
                                         </span>
-                                    </td>
-                                    <td>{asset.productQuantity}</td>
-                                    <td>{new Date(asset.addedDate).toLocaleDateString()}</td>
-                                    <td>
-                                        <button onClick={() => handleDelete(asset._id)} className="btn btn-error btn-sm text-white">Delete</button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
@@ -83,4 +76,4 @@ const AssetList = () => {
     );
 };
 
-export default AssetList;
+export default MyAssets;
