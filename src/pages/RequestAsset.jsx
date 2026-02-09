@@ -1,87 +1,109 @@
-import React, { useState } from "react";
-import Swal from "sweetalert2";
+import React, { useEffect, useState } from 'react';
+import useAuth from '../hooks/useAuth';
+import useAxiosPublic from '../hooks/useAxiosPublic';
+import Swal from 'sweetalert2';
 
 const RequestAsset = () => {
-  // Temporary data: HR jeta add korbe sheta ekhane show hobe
-  const [assets, setAssets] = useState([
-    { id: 1, name: "Macbook M3", type: "Returnable", availability: "Available" },
-    { id: 2, name: "Monitor", type: "Returnable", availability: "Out of stock" },
-    { id: 3, name: "Notebook", type: "Non-returnable", availability: "Available" },
-  ]);
+    const { user } = useAuth();
+    const axiosPublic = useAxiosPublic();
+    const [assets, setAssets] = useState([]);
+    const [myRequests, setMyRequests] = useState([]);
 
-  const handleRequest = (asset) => {
-    Swal.fire({
-      title: `Request for ${asset.name}`,
-      input: "textarea",
-      inputLabel: "Additional Notes",
-      inputPlaceholder: "Why do you need this asset?",
-      showCancelButton: true,
-      confirmButtonText: "Send Request",
-      confirmButtonColor: "#570df8", // primary color
-    }).then((result) => {
-      if (result.isConfirmed) {
-        Swal.fire("Requested!", "Your request has been sent to HR.", "success");
-        // Pore ekhane backend-e request pathanor logic hobe
-      }
-    });
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-base-200">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <h2 className="text-2xl font-bold">Request for an Asset</h2>
+    const fetchData = async () => {
+        const assetRes = await axiosPublic.get('/assets');
+        setAssets(assetRes.data);
         
-        {/* Search & Filter */}
-        <div className="flex gap-2">
-          <input 
-            type="text" 
-            placeholder="Search by name..." 
-            className="input input-bordered input-sm" 
-          />
-          <select className="select select-bordered select-sm">
-            <option disabled selected>Filter by Type</option>
-            <option>Returnable</option>
-            <option>Non-returnable</option>
-          </select>
-        </div>
-      </div>
+        if (user?.email) {
+            const reqRes = await axiosPublic.get(`/my-requests/${user.email}`);
+            setMyRequests(reqRes.data);
+        }
+    };
 
-      <div className="overflow-x-auto">
-        <table className="table w-full">
-          <thead className="bg-base-200">
-            <tr>
-              <th>Asset Name</th>
-              <th>Asset Type</th>
-              <th>Availability</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assets.map((asset) => (
-              <tr key={asset.id}>
-                <td className="font-semibold">{asset.name}</td>
-                <td>{asset.type}</td>
-                <td>
-                  <span className={`badge badge-sm ${asset.availability === 'Available' ? 'badge-success' : 'badge-error text-white'}`}>
-                    {asset.availability}
-                  </span>
-                </td>
-                <td>
-                  <button 
-                    onClick={() => handleRequest(asset)}
-                    disabled={asset.availability === 'Out of stock'}
-                    className="btn btn-primary btn-xs rounded-lg px-4"
-                  >
-                    Request
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+    useEffect(() => {
+        fetchData();
+    }, [user?.email]);
+
+    const handleRequest = async (asset) => {
+        const requestData = {
+            assetId: asset._id,
+            productName: asset.productName,
+            productType: asset.productType,
+            requesterEmail: user?.email,
+            requesterName: user?.displayName,
+            requestDate: new Date().toISOString(),
+            status: "pending",
+            hrEmail: asset.hrEmail
+        };
+
+        const res = await axiosPublic.post('/requests', requestData);
+        if (res.data.insertedId) {
+            Swal.fire("Requested!", "Waiting for HR approval.", "success");
+            fetchData();
+        }
+    };
+
+    const handleCancel = async (assetId) => {
+        const requestToCancel = myRequests.find(req => req.assetId === assetId && req.status === "pending");
+        if (!requestToCancel) return;
+
+        const res = await axiosPublic.delete(`/requests/${requestToCancel._id}`);
+        if (res.data.deletedCount > 0) {
+            Swal.fire("Cancelled!", "Your request has been removed.", "info");
+            fetchData();
+        }
+    };
+
+    return (
+        <div className="p-10">
+            <h2 className="text-3xl font-bold mb-6 text-center">Available Assets</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {assets.map(asset => {
+                    const isRequested = myRequests.find(req => req.assetId === asset._id);
+
+                    return (
+                        <div key={asset._id} className="card bg-white shadow-xl p-6 border border-base-200 rounded-2xl">
+                            <h3 className="text-xl font-bold">{asset.productName}</h3>
+                            <p className="text-gray-500">Type: {asset.productType}</p>
+                            <p className={`font-bold ${asset.productQuantity > 0 ? 'text-success' : 'text-error'}`}>
+                                Stock: {asset.productQuantity}
+                            </p>
+                            
+                            <div className="mt-4 flex flex-col gap-2">
+                                {isRequested ? (
+                                    <div className="space-y-2">
+                                        {isRequested.status === "rejected" ? (
+                                            <div className="text-center bg-red-50 p-2 rounded-lg border border-red-200">
+                                                <span className="text-error font-bold text-sm">HR Rejected your application</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <button disabled className={`btn btn-sm w-full text-white ${isRequested.status === "approved" ? "btn-success" : "btn-neutral"}`}>
+                                                    {isRequested.status === "approved" ? "Approved" : "Requested"}
+                                                </button>
+                                                {isRequested.status === "pending" && (
+                                                    <button onClick={() => handleCancel(asset._id)} className="btn btn-sm btn-outline btn-error w-full">
+                                                        Cancel Request
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button 
+                                        disabled={asset.productQuantity <= 0}
+                                        onClick={() => handleRequest(asset)}
+                                        className="btn btn-sm btn-primary w-full"
+                                    >
+                                        Request Asset
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
 };
 
 export default RequestAsset;

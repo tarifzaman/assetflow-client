@@ -12,6 +12,9 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import AssetList from "../pages/AssetList";
 import RequestAsset from "../pages/RequestAsset";
 import AllRequests from "../pages/AllRequests";
+import MyEmployeeList from "../pages/MyEmployeeList";
+import AddEmployee from "../pages/AddEmployee";
+import MyTeam from "../pages/MyTeam";
 
 export const router = createBrowserRouter([
   {
@@ -68,6 +71,9 @@ export const router = createBrowserRouter([
         path: "all-requests",
         element: <AllRequests />,
       },
+      { path: "my-employee-list", element: <MyEmployeeList /> },
+      { path: "add-employee", element: <AddEmployee /> },
+      { path: "my-team", element: <MyTeam /> },
     ],
   },
 ]);
