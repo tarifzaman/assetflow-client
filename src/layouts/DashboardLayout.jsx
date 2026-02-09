@@ -2,7 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 const DashboardLayout = () => {
     // Pore amra backend theke role nibo, ekhon just test korar jonno manually "hr" ba "employee" likhen
-    const role = "hr"; 
+    const role = "employee"; 
 
     const hrLinks = (
         <>

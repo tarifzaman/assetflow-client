@@ -9,6 +9,9 @@ import PrivateRoute from "./PrivateRoute";
 import AddAsset from "../pages/AddAsset";
 import MyAssets from "../pages/MyAssets";
 import DashboardLayout from "../layouts/DashboardLayout";
+import AssetList from "../pages/AssetList";
+import RequestAsset from "../pages/RequestAsset";
+import AllRequests from "../pages/AllRequests";
 
 export const router = createBrowserRouter([
   {
@@ -52,6 +55,18 @@ export const router = createBrowserRouter([
       {
         path: "my-assets",
         element: <MyAssets />,
+      },
+      {
+        path: "asset-list",
+        element: <AssetList />,
+      },
+      {
+        path: "request-asset",
+        element: <RequestAsset />,
+      },
+      {
+        path: "all-requests",
+        element: <AllRequests />,
       },
     ],
   },
