@@ -13,11 +13,14 @@ const JoinEmployee = () => {
     const name = form.name.value;
     const email = form.email.value;
     const password = form.password.value;
-    const photo = form.photo.value;
 
     try {
+      // 1. Firebase Auth-e user create kora
       await createUser(email, password);
-      await updateUserProfile(name, photo);
+      
+      // 2. Profile update (Sudhu name pathachhi, photo pore upload hobe)
+      await updateUserProfile(name, ""); 
+
       Swal.fire("Welcome!", "Your employee account is ready 🎉", "success");
       navigate("/");
     } catch (err) {
@@ -68,14 +71,6 @@ const JoinEmployee = () => {
               name="name"
               type="text"
               placeholder="Full Name"
-              className="input input-bordered w-full"
-              required
-            />
-
-            <input
-              name="photo"
-              type="text"
-              placeholder="Profile Photo URL"
               className="input input-bordered w-full"
               required
             />
