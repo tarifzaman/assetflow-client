@@ -5,10 +5,10 @@ import JoinEmployee from "../pages/JoinEmployee";
 import DashboardHome from "../pages/DashboardHome";
 import JoinHR from "../pages/JoinHR";
 import Login from "../pages/Login";
-import Register from "../pages/Register";
 import PrivateRoute from "./PrivateRoute";
 import AddAsset from "../pages/AddAsset";
 import MyAssets from "../pages/MyAssets";
+import DashboardLayout from "../layouts/DashboardLayout";
 
 export const router = createBrowserRouter([
   {
@@ -31,20 +31,28 @@ export const router = createBrowserRouter([
         path: "login",
         element: <Login />,
       },
+    ],
+  },
+  {
+    path: "dashboard",
+    element: (
+      <PrivateRoute>
+        <DashboardLayout /> {/* Dashboard er Sidebar wala layout ekhane hobe */}
+      </PrivateRoute>
+    ),
+    children: [
       {
-        path: "register",
-        element: <Register />,
+        index: true, // /dashboard e dhuklei eta dekhabe
+        element: <DashboardHome />,
       },
       {
-        path: "dashboard",
-        element: (
-          <PrivateRoute>
-            <DashboardHome />
-          </PrivateRoute>
-        ),
+        path: "add-asset",
+        element: <AddAsset />,
       },
-      { path: "add-asset", element: <AddAsset /> },
-      { path: "my-assets", element: <MyAssets /> },
+      {
+        path: "my-assets",
+        element: <MyAssets />,
+      },
     ],
   },
 ]);
