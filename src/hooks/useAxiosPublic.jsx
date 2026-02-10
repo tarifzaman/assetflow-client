@@ -1,11 +1,11 @@
 import axios from "axios";
 
 const axiosPublic = axios.create({
-    baseURL: 'https://assetflow-server-1.onrender.com'
+  baseURL: "https://assetflow-server-2.onrender.com",
 });
 
 const useAxiosPublic = () => {
-    return axiosPublic;
+  return axiosPublic;
 };
 
 export default useAxiosPublic;
