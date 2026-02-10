@@ -15,6 +15,7 @@ import AllRequests from "../pages/AllRequests";
 import MyEmployeeList from "../pages/MyEmployeeList";
 import AddEmployee from "../pages/AddEmployee";
 import MyTeam from "../pages/MyTeam";
+import UpgradePackage from "../pages/UpgradePackage";
 
 export const router = createBrowserRouter([
   {
@@ -74,6 +75,10 @@ export const router = createBrowserRouter([
       { path: "my-employee-list", element: <MyEmployeeList /> },
       { path: "add-employee", element: <AddEmployee /> },
       { path: "my-team", element: <MyTeam /> },
+      {
+        path: "upgrade-package",
+        element: <UpgradePackage />,
+      },
     ],
   },
 ]);

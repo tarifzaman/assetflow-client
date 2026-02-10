@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import useAuth from '../hooks/useAuth';
 import useAxiosPublic from '../hooks/useAxiosPublic';
 import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
 
 const AllRequests = () => {
     const { user } = useAuth();
     const axiosPublic = useAxiosPublic();
     const [requests, setRequests] = useState([]);
+    const navigate = useNavigate();
 
     const loadData = () => {
         axiosPublic.get(`/hr-requests/${user?.email}`).then(res => setRequests(res.data));
@@ -15,11 +17,50 @@ const AllRequests = () => {
     useEffect(() => { loadData(); }, [user?.email]);
 
     const handleApprove = async (req) => {
-        const res = await axiosPublic.patch(`/requests/approve/${req._id}`, { assetId: req.assetId, requesterEmail: req.requesterEmail, hrEmail: user?.email });
-        if (res.data.modifiedCount > 0) {
-            Swal.fire({ title: "Approved!", icon: "success", confirmButtonColor: "#10B981" });
-            loadData();
+        try {
+            const res = await axiosPublic.patch(`/requests/approve/${req._id}`, { 
+                assetId: req.assetId, 
+                requesterEmail: req.requesterEmail, 
+                hrEmail: user?.email 
+            });
+            
+            if (res.data.modifiedCount > 0) {
+                Swal.fire({ 
+                    title: "Approved!", 
+                    text: "Request processed successfully.",
+                    icon: "success", 
+                    confirmButtonColor: "#10B981" 
+                });
+                loadData();
+            }
+        } catch (err) {
+            // যদি মেম্বার স্লট লিমিট ক্রস করে
+            if (err.response && err.response.status === 400) {
+                Swal.fire({
+                    title: "Slot Limit Reached!",
+                    text: "Your current package limit is full. Please upgrade to add more members.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#5C42CF",
+                    confirmButtonText: "Upgrade Package",
+                    cancelButtonColor: "#d33",
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // আপনার প্যাকেজ কেনার পেজের রাউট এখানে দিন
+                        navigate("/upgrade-package"); 
+                    }
+                });
+            } else {
+                Swal.fire("Error", "Something went wrong!", "error");
+            }
         }
+    };
+
+    const handleReject = (id) => {
+        axiosPublic.patch(`/requests/reject/${id}`).then(() => {
+            Swal.fire("Rejected", "The request has been declined.", "info");
+            loadData();
+        });
     };
 
     return (
@@ -56,7 +97,7 @@ const AllRequests = () => {
                                     {req.status === 'pending' ? (
                                         <div className="flex justify-center gap-4">
                                             <button onClick={() => handleApprove(req)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-emerald-200 transition-all active:scale-90">Approve</button>
-                                            <button onClick={() => axiosPublic.patch(`/requests/reject/${req._id}`).then(() => loadData())} className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-rose-200 transition-all active:scale-90">Reject</button>
+                                            <button onClick={() => handleReject(req._id)} className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-rose-200 transition-all active:scale-90">Reject</button>
                                         </div>
                                     ) : (
                                         <div className="flex justify-center items-center">
@@ -76,4 +117,5 @@ const AllRequests = () => {
         </div>
     );
 };
+
 export default AllRequests;
